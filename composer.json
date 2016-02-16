@@ -16,5 +16,8 @@
     "irc": "irc://irc.freenode.org/drupal-contribute",
     "source": "https://cgit.drupalcode.org/icecat"
   },
+  "require": {
+    "haringsrob/icecat": "dev-master",
+  },
   "minimum-stability": "dev",
 }

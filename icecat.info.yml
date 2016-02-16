@@ -1,1 +1,6 @@
 name: Icecat
+description: Enables data from Icecat to be fed to entities
+package: Custom
+
+type: module
+core: 8.x

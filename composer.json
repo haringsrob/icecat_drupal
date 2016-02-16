@@ -9,7 +9,7 @@
       "name": "Harings Rob (harings_rob)",
       "homepage": "https://harings.be",
       "role": "Maintainer"
-    },
+    }
   ],
   "support": {
     "issues": "https://drupal.org/project/issues/icecat",
@@ -17,7 +17,7 @@
     "source": "https://cgit.drupalcode.org/icecat"
   },
   "require": {
-    "haringsrob/icecat": "dev-master",
+    "haringsrob/icecat": "dev-master"
   },
-  "minimum-stability": "dev",
+  "minimum-stability": "dev"
 }

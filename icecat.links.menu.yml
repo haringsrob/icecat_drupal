@@ -1,5 +1,5 @@
-icecat.admin.structure.settings:
-  title: Icecat Settings
-  description: 'Icecat configuration'
-  route_name:  icecat.settings
+icecat.admin.structure:
+  title: Icecat
+  description: 'Icecat'
+  route_name: entity.icecat_mapping.collection
   parent: system.admin_structure

@@ -1,0 +1,5 @@
+icecat_mapping.add:
+  route_name: entity.icecat_mapping.add_form
+  title: 'Add mapping'
+  appears_on:
+    - entity.icecat_mapping.collection

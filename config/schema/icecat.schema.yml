@@ -1,0 +1,13 @@
+icecat.icecat_mapping.*:
+  type: config_entity
+  label: 'Icecat mapping'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    entity:
+      type: text
+      label: 'Local entity'

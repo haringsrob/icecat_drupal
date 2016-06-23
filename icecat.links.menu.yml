@@ -1,0 +1,5 @@
+icecat.admin.structure.settings:
+  title: Icecat Settings
+  description: 'Icecat configuration'
+  route_name:  icecat.settings
+  parent: system.admin_structure

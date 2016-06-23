@@ -1,0 +1,4 @@
+icecat.settings_tab:
+  route_name: icecat.settings
+  title: Settings
+  base_route: icecat.settings

@@ -1,0 +1,7 @@
+icecat.settings:
+  path: 'admin/structure/icecat/settings'
+  defaults:
+    _form: '\Drupal\icecat\Form\settingsForm'
+    _title: 'Icecat Settings'
+  requirements:
+      _permission: 'administer icecat settings'

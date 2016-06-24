@@ -105,7 +105,6 @@ class IcecatMappingForm extends EntityForm {
           '#size' => 1,
         ];
       }
-
     }
     else {
       $form['info'] = [

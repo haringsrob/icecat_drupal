@@ -11,7 +11,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   id ="icecat_mapping_link",
  *   label = @Translation("Icecat Mapping Link"),
  *   handlers = {
- *     "list_builder" = "Drupal\icecat\IcecatMappingListBuilder",
+ *     "list_builder" = "Drupal\icecat\IcecatMappingLinkListBuilder",
  *     "form" = {
  *       "default" = "Drupal\icecat\IcecatMappingLinkForm",
  *       "add" = "Drupal\icecat\IcecatMappingLinkForm",

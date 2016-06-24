@@ -75,28 +75,47 @@ class IcecatMappingLinkForm extends EntityForm {
       '#default_value' => $entity->label(),
     ];
 
-    $test = $this->routeMatch->getParameters()->get('icecat_mapping');
+    // Get the mapping entity from the url.
+    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($this->routeMatch->getParameters()->get('icecat_mapping'));
+
+    // Get the base fields for the entity type.
+    $base_fields = $this->entityFieldManager->getBaseFieldDefinitions($mapping_entity->getMappingEntityType());
+
+    // Our list of supported field types.
+    $supported_field_types = [
+      'string',
+    ];
+
+    // Initialize the supported fields.
+    $supported_fields = [];
+
+    foreach ($base_fields as $field) {
+      if (in_array($field->getType(), $supported_field_types)) {
+        $supported_fields[$field->getType()][] = $field->getName();
+      }
+    }
 
     $form['mapping'] = [
       '#type' => 'entity_autocomplete',
       '#title' => t('The parent mapping'),
       '#target_type' => 'icecat_mapping',
-      '#default_value' => '',
+      '#default_value' => $mapping_entity ? $mapping_entity : '',
       '#required' => TRUE,
+      '#disabled' => $mapping_entity ? TRUE : FALSE,
       '#size' => 55,
     ];
 
     $form['local_field'] = [
-      '#type' => 'textfield',
-      '#title' => t('Type of entity to map to'),
+      '#type' => 'select',
+      '#title' => t('Local field'),
       '#default_value' => $entity->getLocalField(),
+      '#options' => $supported_fields,
       '#required' => TRUE,
-      '#size' => 55,
     ];
 
     $form['remote_field'] = [
       '#type' => 'textfield',
-      '#title' => t('Type of entity to map to'),
+      '#title' => t('Remote field'),
       '#default_value' => $entity->getRemoteField(),
       '#required' => TRUE,
       '#size' => 55,

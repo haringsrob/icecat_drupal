@@ -17,14 +17,19 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *       "add" = "Drupal\icecat\IcecatMappingForm",
  *       "edit" = "Drupal\icecat\IcecatMappingForm",
  *       "delete" = "Drupal\Core\Entity\EntityDeleteForm"
- *     }
+ *     },
+ *     "route_provider" = {
+ *       "default" = "Drupal\Core\Entity\Routing\DefaultHtmlRouteProvider",
+ *     },
  *   },
  *   config_prefix = "icecat_mapping",
+ *   admin_permission = "manage icecat mappings",
  *   entity_keys = {
  *     "id" = "id",
  *     "label" = "label"
  *   },
  *   links = {
+ *     "add-form" = "/admin/structure/icecat/mappings/add",
  *     "delete-form" = "/admin/structure/icecat/mappings/{icecat_mapping}/delete",
  *     "edit-form" = "/admin/structure/icecat/mappings/{icecat_mapping}",
  *     "collection" = "/admin/structure/icecat/mappings",
@@ -32,7 +37,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   config_export = {
  *     "id",
  *     "label",
- *     "entity",
+ *     "entity_type",
  *   }
  * )
  */
@@ -41,8 +46,8 @@ class IcecatMapping extends ConfigEntityBase implements IcecatMappingInterface {
   /**
    * {@inheritdoc}
    */
-  public function getEntity() {
-    return $this->get('entity');
+  public function getMappingEntityType() {
+    return $this->get('entity_type');
   }
 
 }

@@ -8,6 +8,29 @@ icecat.icecat_mapping.*:
     label:
       type: label
       label: 'Label'
-    entity:
+    entity_type:
       type: text
-      label: 'Local entity'
+      label: 'Entity type'
+    entity_type_bundle:
+      type: text
+      label: 'Entity type bundle'
+
+icecat.icecat_mapping_link.*:
+  type: config_entity
+  label: 'Icecat mapping link'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    mapping:
+      type: text
+      label: 'Mapping reference'
+    local_field:
+      type: text
+      label: 'Local field'
+    remote_field:
+      type: text
+      label: 'Remote field'

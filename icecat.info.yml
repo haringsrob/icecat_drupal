@@ -3,3 +3,5 @@ type: module
 description: Icecat api bridge
 core: 8.x
 package: datacompletion
+dependencies:
+  - inline_entity_form

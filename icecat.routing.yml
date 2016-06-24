@@ -21,3 +21,11 @@ entity.icecat_mapping.collection:
     _title: 'Icecat Mappings'
   requirements:
     _permission: 'manage icecat mappings'
+
+entity.icecat_mapping_link.collection:
+  path: '/admin/structure/icecat/mappings/{icecat_mapping}/links'
+  defaults:
+    _entity_list: 'icecat_mapping_link'
+    _title: 'Icecat Mappings links'
+  requirements:
+    _permission: 'manage icecat mappings'

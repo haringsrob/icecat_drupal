@@ -14,6 +14,6 @@ interface IcecatMappingInterface extends ConfigEntityInterface {
   /**
    * Gets the local entity value.
    */
-  public function getEntity();
+  public function getMappingEntityType();
 
 }

@@ -4,6 +4,7 @@ namespace Drupal\icecat;
 
 use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
 
 /**
  * Class IcecatMappingListBuilder.
@@ -26,8 +27,24 @@ class IcecatMappingListBuilder extends ConfigEntityListBuilder {
    */
   public function buildRow(EntityInterface $entity) {
     $row['label'] = $entity->label();
-    $row['entity'] = $entity->getEntity();
+    $row['entity'] = $entity->getMappingEntityType();
     return $row + parent::buildRow($entity);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDefaultOperations(EntityInterface $entity) {
+    /** @var \Drupal\icecat\Entity\IcecatMappingInterface $entity */
+    $operations = parent::getDefaultOperations($entity);
+    $operations['icecat_mapping_links'] = [
+      'title' => $this->t('View mapping links'),
+      'url' => Url::fromRoute('entity.icecat_mapping_link.collection', [
+        'icecat_mapping' => $entity->id(),
+      ]),
+    ];
+
+    return $operations;
   }
 
 }

@@ -48,6 +48,19 @@ class IcecatMappingLink extends ConfigEntityBase implements IcecatMappingLinkInt
   /**
    * {@inheritdoc}
    */
+  public function urlRouteParameters($rel) {
+    $parameters = parent::urlRouteParameters($rel);
+    if (!isset($parameters['icecat_mapping'])) {
+      $parameters['icecat_mapping'] = \Drupal::service('current_route_match')
+        ->getParameters()
+        ->get('icecat_mapping');
+    }
+    return $parameters;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getLocalField() {
     return $this->get('local_field');
   }

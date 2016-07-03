@@ -38,6 +38,8 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "id",
  *     "label",
  *     "entity_type",
+ *     "entity_type_bundle",
+ *     "data_input_field",
  *   }
  * )
  */
@@ -48,6 +50,20 @@ class IcecatMapping extends ConfigEntityBase implements IcecatMappingInterface {
    */
   public function getMappingEntityType() {
     return $this->get('entity_type');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getMappingEntityBundle() {
+    return $this->get('entity_type_bundle');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDataInputField() {
+    return $this->get('data_input_field');
   }
 
 }

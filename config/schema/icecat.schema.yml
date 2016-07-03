@@ -14,6 +14,9 @@ icecat.icecat_mapping.*:
     entity_type_bundle:
       type: text
       label: 'Entity type bundle'
+    data_input_field:
+      type: text
+      label: 'The field to use as data source'
 
 icecat.icecat_mapping_link.*:
   type: config_entity
@@ -22,9 +25,6 @@ icecat.icecat_mapping_link.*:
     id:
       type: string
       label: 'ID'
-    label:
-      type: label
-      label: 'Label'
     mapping:
       type: text
       label: 'Mapping reference'

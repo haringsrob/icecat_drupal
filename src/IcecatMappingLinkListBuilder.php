@@ -17,7 +17,8 @@ class IcecatMappingLinkListBuilder extends ConfigEntityListBuilder {
    */
   public function buildHeader() {
     $header['label'] = $this->t('Label');
-    $header['mapping'] = $this->t('Mapping');
+    $header['local_field'] = $this->t('Local field');
+    $header['remote_field'] = $this->t('Remote field');
     return $header + parent::buildHeader();
   }
 
@@ -26,7 +27,8 @@ class IcecatMappingLinkListBuilder extends ConfigEntityListBuilder {
    */
   public function buildRow(EntityInterface $entity) {
     $row['label'] = $entity->label();
-    $row['mapping'] = $entity->getMapping();
+    $row['local_field'] = $entity->getLocalField();
+    $row['remote_field'] = $entity->getRemoteField();
     return $row + parent::buildRow($entity);
   }
 

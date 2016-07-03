@@ -65,33 +65,40 @@ class IcecatMappingLinkForm extends EntityForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = parent::form($form, $form_state);
 
-    /** @var \Drupal\icecat\Entity\IcecatMappingInterface $entity */
+    /** @var \Drupal\icecat\Entity\IcecatMappingLinkInterface $entity */
     $entity = $this->entity;
 
-    $form['label'] = [
-      '#type' => 'textfield',
-      '#title' => t('Label'),
-      '#required' => TRUE,
-      '#default_value' => $entity->label(),
-    ];
-
     // Get the mapping entity from the url.
-    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($this->routeMatch->getParameters()->get('icecat_mapping'));
-
-    // Get the base fields for the entity type.
-    $base_fields = $this->entityFieldManager->getBaseFieldDefinitions($mapping_entity->getMappingEntityType());
+    $mapping = $this->routeMatch->getParameters()->get('icecat_mapping');
+    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($mapping);
 
     // Our list of supported field types.
     $supported_field_types = [
       'string',
+      'string_long',
+      'integer',
     ];
 
     // Initialize the supported fields.
     $supported_fields = [];
+    $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping_link');
 
+    // Get all the available fields on the entity bundle.
+    $base_fields = $this->entityFieldManager->getFieldDefinitions($mapping_entity->getMappingEntityType(), $mapping_entity->getMappingEntityBundle());
+
+    // Loop and populate our supported fields list.
     foreach ($base_fields as $field) {
-      if (in_array($field->getType(), $supported_field_types)) {
-        $supported_fields[$field->getType()][] = $field->getName();
+      if (in_array($field->getType(), $supported_field_types) &&
+        !$field->isReadOnly() &&
+        $mapping_entity->getDataInputField() !== $field->getName() &&
+        ($entity->getLocalField() == $field->getName() || !$mapping_link_storage->loadByProperties([
+          'mapping' => $mapping,
+          'local_field' => $field->getName(),
+        ])) &&
+        // @todo: Add another way to handle this.
+        is_string($field->getLabel())
+      ) {
+        $supported_fields[$field->getType()][$field->getName()] = $field->getLabel();
       }
     }
 
@@ -111,7 +118,12 @@ class IcecatMappingLinkForm extends EntityForm {
       '#default_value' => $entity->getLocalField(),
       '#options' => $supported_fields,
       '#required' => TRUE,
+      '#disabled' => empty($supported_fields) ? TRUE : FALSE,
     ];
+
+    if (empty($supported_fields)) {
+      $form_state->setErrorByName('local_field', $this->t('There are no available fields for mapping.'));
+    }
 
     $form['remote_field'] = [
       '#type' => 'textfield',
@@ -127,6 +139,20 @@ class IcecatMappingLinkForm extends EntityForm {
   /**
    * {@inheritdoc}
    */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $is_new = !$this->entity->getOriginalId();
+
+    // Make sure we dont duplicate any mapping.
+    if ($is_new && $this->entityTypeManager->getStorage('icecat_mapping_link')
+        ->load($this->generateMachineName())
+    ) {
+      $form_state->setErrorByName('remote_field', $this->t('You already added a field with these properties'));
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function save(array $form, FormStateInterface $form_state) {
     $entity = $this->entity;
     $is_new = !$entity->getOriginalId();
@@ -135,16 +161,23 @@ class IcecatMappingLinkForm extends EntityForm {
     // we redirect to list.
     if ($is_new) {
       // Configuration entities need an ID manually set.
-      $machine_name = \Drupal::transliteration()
-        ->transliterate($entity->label(), LanguageInterface::LANGCODE_DEFAULT, '_');
-      $entity->set('id', Unicode::strtolower($machine_name));
+      $entity->set('id', Unicode::strtolower($this->generateMachineName()));
 
       // Also inform that the user cna now continue editing.
-      drupal_set_message($this->t('Mapping link has been added'));
+      drupal_set_message($this->t('Mapping link has been created'));
     }
 
     // Save the entity.
     $entity->save();
+  }
+
+  /**
+   * Generates the machine name to use.
+   */
+  private function generateMachineName() {
+    return \Drupal::transliteration()
+      ->transliterate($this->routeMatch->getParameters()
+          ->get('icecat_mapping') . '__' . $this->entity->getLocalField() . '_' . $this->entity->getRemoteField(), LanguageInterface::LANGCODE_DEFAULT, '_');
   }
 
 }

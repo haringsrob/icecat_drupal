@@ -19,6 +19,8 @@ class IcecatMappingListBuilder extends ConfigEntityListBuilder {
   public function buildHeader() {
     $header['label'] = $this->t('Label');
     $header['entity'] = $this->t('Entity');
+    $header['bundle'] = $this->t('Bundle');
+    $header['source_field'] = $this->t('Source field');
     return $header + parent::buildHeader();
   }
 
@@ -28,6 +30,8 @@ class IcecatMappingListBuilder extends ConfigEntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     $row['label'] = $entity->label();
     $row['entity'] = $entity->getMappingEntityType();
+    $row['bundle'] = $entity->getMappingEntityBundle();
+    $row['source_field'] = $entity->getDataInputField();
     return $row + parent::buildRow($entity);
   }
 

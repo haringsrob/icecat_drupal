@@ -48,6 +48,13 @@ class IcecatMappingLink extends ConfigEntityBase implements IcecatMappingLinkInt
   /**
    * {@inheritdoc}
    */
+  public function label() {
+    return $this->getLocalField() . '::' . $this->getRemoteField();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function urlRouteParameters($rel) {
     $parameters = parent::urlRouteParameters($rel);
     if (!isset($parameters['icecat_mapping'])) {

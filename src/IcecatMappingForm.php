@@ -6,11 +6,11 @@ use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\Core\Entity\EntityTypeRepository;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\field\Entity\FieldConfig;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 
 /**
  * Class IcecatMappingForm.
@@ -18,6 +18,13 @@ use Drupal\field\Entity\FieldConfig;
  * @package Drupal\icecat
  */
 class IcecatMappingForm extends EntityForm {
+
+  /**
+   * The entity type repository.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeRepository
+   */
+  protected $entityTypeRepository;
 
   /**
    * The entity type manager.
@@ -34,11 +41,20 @@ class IcecatMappingForm extends EntityForm {
   protected $entityFieldManager;
 
   /**
+   * The entity type bundle interface.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
+   */
+  protected $entityTypeBundleInterface;
+
+  /**
    * Constructs a new IcecatMappingForm.
    */
-  public function __construct(EntityTypeManager $entityTypeManager, EntityFieldManager $entityFieldManager) {
+  public function __construct(EntityTypeManager $entityTypeManager, EntityFieldManager $entityFieldManager, EntityTypeRepository $entityTypeRepository, EntityTypeBundleInfoInterface $entityTypeBundleInterface) {
     $this->entityTypeManager = $entityTypeManager;
     $this->entityFieldManager = $entityFieldManager;
+    $this->entityTypeRepository = $entityTypeRepository;
+    $this->entityTypeBundleInterface = $entityTypeBundleInterface;
   }
 
   /**
@@ -47,7 +63,9 @@ class IcecatMappingForm extends EntityForm {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('entity_field.manager')
+      $container->get('entity_field.manager'),
+      $container->get('entity_type.repository'),
+      $container->get('entity_type.bundle.info')
     );
   }
 
@@ -62,53 +80,76 @@ class IcecatMappingForm extends EntityForm {
 
     $form['label'] = [
       '#type' => 'textfield',
-      '#title' => t('Label'),
+      '#title' => $this->t('Label'),
       '#required' => TRUE,
       '#default_value' => $entity->label(),
     ];
 
     $form['entity_type'] = [
       '#type' => 'select',
-      '#title' => t('Type of entity to map to'),
-      '#options' => \Drupal::entityManager()->getEntityTypeLabels(TRUE),
+      '#title' => $this->t('Type of entity to map to'),
+      '#options' => $this->entityTypeRepository->getEntityTypeLabels(TRUE),
       '#default_value' => $entity->getMappingEntityType(),
       '#required' => TRUE,
       '#size' => 1,
     ];
 
     if ($entity->getMappingEntityType()) {
-      // Get the base fields for the entity type.
-      $base_fields = $this->entityFieldManager->getBaseFieldDefinitions($entity->getMappingEntityType());
 
-      // Our list of supported field types.
-      $supported_field_types = [
-        'string',
-      ];
-
-      // Initialize the supported fields.
-      $supported_fields = [];
-
-      foreach ($base_fields as $field) {
-        if (in_array($field->getType(), $supported_field_types)) {
-          $supported_fields[$field->getType()][] = $field->getName();
+      if ($bundles = $this->entityTypeBundleInterface->getBundleInfo($entity->getMappingEntityType())) {
+        $bundle_list = [];
+        foreach ($bundles as $machine_name => $info) {
+          $bundle_list[$machine_name] = $info['label'];
         }
-      }
 
-      if (!empty($supported_fields)) {
-        // Add the form element.
-        $form['field'] = [
+        $form['entity_type_bundle'] = [
           '#type' => 'select',
-          '#title' => t('Left field'),
-          '#options' => $supported_fields,
-          '#default_value' => '',
+          '#title' => $this->t('Type of entity bundle to use'),
+          '#options' => $bundle_list,
+          '#default_value' => $entity->getMappingEntityBundle(),
           '#required' => TRUE,
           '#size' => 1,
         ];
+        // Only after we have received the entity bundle, we can select the
+        // source data field.
+        if ($entity->getMappingEntityBundle()) {
+
+          // @todo: Move this to a global variable or constant.
+          $supported_field_types = [
+            'integer',
+          ];
+
+          // Initialize the supported fields.
+          $supported_fields = [];
+
+          // Get the base fields.
+          $base_fields = $this->entityFieldManager->getFieldDefinitions($entity->getMappingEntityType(), $entity->getMappingEntityBundle());
+
+          foreach ($base_fields as $field) {
+            if (
+              in_array($field->getType(), $supported_field_types) &&
+              is_string($field->getLabel())
+            ) {
+              $supported_fields[$field->getType()][$field->getName()] = $field->getLabel();
+            }
+          }
+
+          $form['data_input_field'] = [
+            '#type' => 'select',
+            '#title' => $this->t('Select the data source field.'),
+            '#description' => $this->t('Here you can select the data source, this should contain the EAN code of the product.'),
+            '#options' => $supported_fields,
+            '#default_value' => $entity->getMappingEntityBundle(),
+            '#required' => TRUE,
+            '#size' => 1,
+          ];
+        }
+
       }
     }
     else {
       $form['info'] = [
-        '#markup' => $this->t('Please press save and complete additional configurations'),
+        '#markup' => $this->t('Please press save to add the bundle.'),
       ];
     }
 
@@ -124,7 +165,7 @@ class IcecatMappingForm extends EntityForm {
 
     // If the bundle changed, we redirect to the edit page again. In other cases
     // we redirect to list.
-    if ($is_new || $form_state->getValue('entity') !== $entity->load($entity->getOriginalId())
+    if ($is_new || $form_state->getValue('entity_type') !== $entity->load($entity->getOriginalId())
         ->getMappingEntityType()
     ) {
       // Configuration entities need an ID manually set.

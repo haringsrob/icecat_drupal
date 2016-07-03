@@ -16,4 +16,14 @@ interface IcecatMappingInterface extends ConfigEntityInterface {
    */
   public function getMappingEntityType();
 
+  /**
+   * Gets the local entity bundle.
+   */
+  public function getMappingEntityBundle();
+
+  /**
+   * Gets the data input field.
+   */
+  public function getDataInputField();
+
 }

@@ -125,6 +125,20 @@ class IcecatMappingLinkForm extends EntityForm {
       $form_state->setErrorByName('local_field', $this->t('There are no available fields for mapping.'));
     }
 
+    $remote_field_types = [
+      'attribute' => $this->t('Attribute'),
+      'specification' => $this->t('Specification'),
+    ];
+
+    $form['remote_field_type'] = [
+      '#type' => 'select',
+      '#title' => t('Remote field type'),
+      '#default_value' => $entity->getRemoteFieldType(),
+      '#options' => $remote_field_types,
+      '#required' => TRUE,
+      '#size' => 55,
+    ];
+
     $form['remote_field'] = [
       '#type' => 'textfield',
       '#title' => t('Remote field'),

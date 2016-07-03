@@ -4,3 +4,23 @@
  * @file
  * Contains icecat.module..
  */
+
+use Drupal\Core\Entity\EntityInterface;
+use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+
+/**
+ * Implements hook_entity_presave().
+ */
+function icecat_entity_presave(EntityInterface $entity) {
+  $icecatController = \Drupal::service('icecat.mapper');
+  $icecatController->setEntity($entity);
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function icecat_entity_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode) {
+  $icecatController = \Drupal::service('icecat.mapper');
+  $icecatController->setEntity($entity);
+  $icecatController->mapEntityData();
+}

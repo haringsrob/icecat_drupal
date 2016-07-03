@@ -31,6 +31,9 @@ icecat.icecat_mapping_link.*:
     local_field:
       type: text
       label: 'Local field'
+    remote_field_type:
+      type: text
+      label: 'Remote field type'
     remote_field:
       type: text
       label: 'Remote field'

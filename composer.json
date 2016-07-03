@@ -11,7 +11,6 @@
     "source": "http://cgit.drupalcode.org/icecat"
   },
   "require": {
-    "haringsrob/icecat": "dev-master",
-    "drupal/inline_entity_form": "8.1.x-dev"
+    "haringsrob/icecat": "dev-master"
   }
 }

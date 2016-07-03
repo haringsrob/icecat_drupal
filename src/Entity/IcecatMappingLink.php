@@ -39,6 +39,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "label",
  *     "local_field",
  *     "remote_field",
+ *     "remote_field_type",
  *     "mapping",
  *   }
  * )
@@ -77,6 +78,13 @@ class IcecatMappingLink extends ConfigEntityBase implements IcecatMappingLinkInt
    */
   public function getRemoteField() {
     return $this->get('remote_field');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRemoteFieldType() {
+    return $this->get('remote_field_type');
   }
 
   /**

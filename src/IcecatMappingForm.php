@@ -116,7 +116,7 @@ class IcecatMappingForm extends EntityForm {
 
           // @todo: Move this to a global variable or constant.
           $supported_field_types = [
-            'integer',
+            'string_long',
           ];
 
           // Initialize the supported fields.
@@ -125,8 +125,10 @@ class IcecatMappingForm extends EntityForm {
           // Get the base fields.
           $base_fields = $this->entityFieldManager->getFieldDefinitions($entity->getMappingEntityType(), $entity->getMappingEntityBundle());
 
+          /* @var $field \Drupal\Core\Field\BaseFieldDefinition */
           foreach ($base_fields as $field) {
             if (
+              !$field->isReadOnly() &&
               in_array($field->getType(), $supported_field_types) &&
               is_string($field->getLabel())
             ) {

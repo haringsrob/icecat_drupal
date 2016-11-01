@@ -77,8 +77,7 @@ class IcecatMappingLinkForm extends EntityForm {
 
     // Get the mapping entity from the url.
     $mapping = $this->routeMatch->getParameters()->get('icecat_mapping');
-    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')
-      ->load($mapping);
+    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($mapping);
 
     // Our list of supported field types.
     $supported_field_types = [
@@ -116,7 +115,6 @@ class IcecatMappingLinkForm extends EntityForm {
       '#default_value' => $mapping_entity ? $mapping_entity : '',
       '#required' => TRUE,
       '#disabled' => $mapping_entity ? TRUE : FALSE,
-      '#size' => 55,
     ];
 
     $form['local_field'] = [
@@ -139,22 +137,98 @@ class IcecatMappingLinkForm extends EntityForm {
 
     $form['remote_field_type'] = [
       '#type' => 'select',
-      '#title' => t('Remote field type'),
-      '#default_value' => $entity->getRemoteFieldType(),
+      '#title' => $this->t('Remote field type'),
+      '#default_value' => $entity->getRemoteFieldType() ? $entity->getRemoteFieldType() : 'attribute',
       '#options' => $remote_field_types,
       '#required' => TRUE,
-      '#size' => 55,
+      '#ajax' => [
+        'callback' => [$this, 'getPossibleFields'],
+        'event' => 'change',
+        'wrapper' => 'remote_field_data',
+      ],
     ];
 
     $form['remote_field'] = [
-      '#type' => 'textfield',
-      '#title' => t('Remote field'),
+      '#type' => 'select',
+      '#title' => $this->t('Remote field'),
+      '#description' => $this->t('Select the remote field to map. Use the button below to update this list'),
       '#default_value' => $entity->getRemoteField(),
       '#required' => TRUE,
-      '#size' => 55,
+      '#prefix' => '<div id="remote_field_data">',
+      '#suffix' => '</div>',
     ];
 
+    // @todo: Dont think we need this.
+    /*$form['grab_data'] = [
+      '#type' => 'button',
+      '#prefix' => '<div id="example_fields_list">',
+      '#suffix' => '</div>',
+      '#limit_validation_errors' => [],
+      '#value' => $this->t('Get available fields'),
+      '#ajax' => [
+        'callback' => [$this, 'getPossibleFields'],
+        'event' => 'click',
+        'wrapper' => 'remote_field_data',
+      ],
+    ];*/
+
+    $this->getPossibleFields($form, $form_state, $entity->getRemoteField());
+
     return $form;
+  }
+
+  /**
+   * Gets the possible fields from the example ean codes.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The response to be rendered by the ajax response.
+   */
+  public function getPossibleFields(array &$form, FormStateInterface $form_state) {
+    // Get the mapping entity from the url.
+    $mapping = $this->routeMatch->getParameters()->get('icecat_mapping');
+    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($mapping);
+
+    // Get the ean(s).
+    // @todo: implement combinging.
+    $eans = $mapping_entity->getExampleEans();
+    $ean = is_array($eans) ? $eans[0] : $eans;
+
+    // Get the user input so we might get other fields.
+    $input = $form_state->getUserInput();
+
+    $options = [];
+
+    // Based on the specs or attributes we update the list.
+    if (
+      (isset($input['remote_field_type']) && $input['remote_field_type'] == 'specification')
+      || (!isset($input['remote_field_type']) && $form['remote_field_type']['#default_value'] == 'specification')
+    ) {
+      $fetcher = new IcecatFetcher($ean);
+      $result = $fetcher->getResult();
+
+      $specs = $result->getSpecs();
+
+      foreach ($specs as $spec) {
+        $options[$spec['spec_id']] = $spec['name'];
+      }
+    }
+    else {
+      $options = [
+        'ean' => $this->t('ean'),
+        'sku' => $this->t('sku'),
+        'brand' => $this->t('brand'),
+      ];
+    }
+
+    // Adapt the form element.
+    $form['remote_field']['#options'] = $options;
+
+    return $form['remote_field'];
   }
 
   /**

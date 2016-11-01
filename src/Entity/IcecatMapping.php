@@ -37,6 +37,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   config_export = {
  *     "id",
  *     "label",
+ *     "example_ean",
  *     "entity_type",
  *     "entity_type_bundle",
  *     "data_input_field",
@@ -64,6 +65,20 @@ class IcecatMapping extends ConfigEntityBase implements IcecatMappingInterface {
    */
   public function getDataInputField() {
     return $this->get('data_input_field');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getExampleEans() {
+    return $this->get('example_ean');
+  }
+
+  /**
+   * Gets a list of ean codes.
+   */
+  public function getExampleEanList() {
+    return explode(',', preg_replace('/\s+/', '', $this->get('example_ean')));
   }
 
 }

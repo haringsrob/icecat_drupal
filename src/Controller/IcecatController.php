@@ -3,12 +3,12 @@
 namespace Drupal\icecat\Controller;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManager;
+use Drupal\icecat\IcecatFetcher;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use haringsrob\Icecat\Model\Fetcher;
-use haringsrob\Icecat\Model\Result;
 
 /**
  * Class IcecatController.
@@ -20,14 +20,14 @@ class IcecatController implements ContainerInjectionInterface {
   /**
    * The entity used in the controller.
    *
-   * @var Entity;
+   * @var Entity
    */
   private $entity;
 
   /**
    * The entity mapping object.
    *
-   * @var \Drupal\icecat\Entity\IcecatMapping;
+   * @var \Drupal\icecat\Entity\IcecatMapping
    */
   private $entityMapping;
 
@@ -66,9 +66,9 @@ class IcecatController implements ContainerInjectionInterface {
    * @return bool
    *   True if mapping available. False otherwise.
    */
-  public function hasMapping() {
-    // Ignore for users.
-    if ($this->entity->bundle() == 'user') {
+  private function hasMapping() {
+    // @todo: Ignore for non nodes.. But we want to allow this..
+    if (!$this->entity instanceof ContentEntityInterface) {
       return FALSE;
     }
     $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping');
@@ -78,9 +78,25 @@ class IcecatController implements ContainerInjectionInterface {
     ]);
     if (!empty($mappings)) {
       $this->entityMapping = reset($mappings);
+
       return TRUE;
     }
+
     return FALSE;
+  }
+
+  /**
+   * Gets the mapping links.
+   *
+   * @return EntityInterface
+   *   The mapping links.
+   */
+  private function getMappingLinks() {
+    $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping_link');
+    $mapping_links = $mapping_link_storage->loadByProperties([
+      'mapping' => $this->entityMapping->id(),
+    ]);
+    return $mapping_links;
   }
 
   /**
@@ -88,22 +104,19 @@ class IcecatController implements ContainerInjectionInterface {
    */
   public function mapEntityData() {
     if ($this->hasMapping()) {
-      if ($ean_code = $this->entity->get($this->entityMapping->getDataInputField())->getValue()) {
-        $config = \Drupal::config('icecat.settings');
+      $entity = $this->entity;
+      if ($ean_code = $entity->get($this->entityMapping->getDataInputField())->getValue()) {
+        // Initialize a new fetcher object.
+        $fetcherSession = new IcecatFetcher($ean_code[0]['value']);
+        $result = $fetcherSession->getResult();
 
-        if ($config->get('username') && $config->get('password')) {
-          // Initialize a new fetcher object.
-          $fetcherSession = new Fetcher(
-            $config->get('username'),
-            $config->get('password'),
-            $ean_code[0]['value'],
-            $this->entity->language()->getId()
-          );
-          $fetcherSession->fetchBaseData();
-
-          $icecatResult = new Result($fetcherSession->getBaseData());
+        foreach ($this->getMappingLinks() as $mapping) {
+          if ($entity->get($mapping->getLocalField())) {
+            $entity->set($mapping->getLocalField(), $result->getSpec($mapping->getRemoteField()));
+          }
         }
       }
     }
   }
+
 }

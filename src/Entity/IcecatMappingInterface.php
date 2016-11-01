@@ -26,4 +26,10 @@ interface IcecatMappingInterface extends ConfigEntityInterface {
    */
   public function getDataInputField();
 
+  /**
+   * Gets the example ean codes.
+   */
+  public function getExampleEans();
+
+
 }

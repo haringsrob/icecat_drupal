@@ -5,7 +5,6 @@ namespace Drupal\icecat;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
-use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManager;
@@ -102,7 +101,7 @@ class IcecatMappingForm extends EntityForm {
       '#title' => $this->t('Example ean(s)'),
       '#description' => $this->t('A comma separated list of example ean codes. These products will be used for mapping configuration'),
       '#required' => FALSE,
-      '#default_value' => $entity->label(),
+      '#default_value' => $entity->getExampleEans(),
     ];
 
     $form['entity_type'] = [

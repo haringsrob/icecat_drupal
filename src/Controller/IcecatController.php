@@ -67,6 +67,10 @@ class IcecatController implements ContainerInjectionInterface {
    *   True if mapping available. False otherwise.
    */
   public function hasMapping() {
+    // Ignore for users.
+    if ($this->entity->bundle() == 'user') {
+      return FALSE;
+    }
     $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping');
     $mappings = $mapping_link_storage->loadByProperties([
       'entity_type' => $this->entity->getEntityTypeId(),

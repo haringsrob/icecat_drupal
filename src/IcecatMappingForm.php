@@ -3,6 +3,9 @@
 namespace Drupal\icecat;
 
 use Drupal\Component\Utility\Unicode;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManager;
@@ -49,6 +52,15 @@ class IcecatMappingForm extends EntityForm {
 
   /**
    * Constructs a new IcecatMappingForm.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManager $entityTypeManager
+   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManager $entityFieldManager
+   *   The entity field manager.
+   * @param \Drupal\Core\Entity\EntityTypeRepository $entityTypeRepository
+   *   The entity repository.
+   * @param \Drupal\Core\Entity\EntityTypeBundleInfoInterface $entityTypeBundleInterface
+   *   The entity bundle interface.
    */
   public function __construct(EntityTypeManager $entityTypeManager, EntityFieldManager $entityFieldManager, EntityTypeRepository $entityTypeRepository, EntityTypeBundleInfoInterface $entityTypeBundleInterface) {
     $this->entityTypeManager = $entityTypeManager;
@@ -85,6 +97,14 @@ class IcecatMappingForm extends EntityForm {
       '#default_value' => $entity->label(),
     ];
 
+    $form['example_ean'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Example ean(s)'),
+      '#description' => $this->t('A comma separated list of example ean codes. These products will be used for mapping configuration'),
+      '#required' => FALSE,
+      '#default_value' => $entity->label(),
+    ];
+
     $form['entity_type'] = [
       '#type' => 'select',
       '#title' => $this->t('Type of entity to map to'),
@@ -92,68 +112,39 @@ class IcecatMappingForm extends EntityForm {
       '#default_value' => $entity->getMappingEntityType(),
       '#required' => TRUE,
       '#size' => 1,
+      '#ajax' => [
+        'callback' => [$this, 'updateBundles'],
+        'event' => 'change',
+        'wrapper' => 'entity_type_bundle_ajax',
+      ],
     ];
 
-    if ($entity->getMappingEntityType()) {
+    $form['entity_type_bundle'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Type of entity bundle to use'),
+      '#default_value' => $entity->getMappingEntityBundle(),
+      '#required' => TRUE,
+      '#prefix' => '<div id="entity_type_bundle_ajax">',
+      '#suffix' => '</div>',
+      '#ajax' => [
+        'callback' => [$this, 'updateInputField'],
+        'event' => 'change',
+        'wrapper' => 'data_input_field_ajax',
+      ],
+    ];
 
-      if ($bundles = $this->entityTypeBundleInterface->getBundleInfo($entity->getMappingEntityType())) {
-        $bundle_list = [];
-        foreach ($bundles as $machine_name => $info) {
-          $bundle_list[$machine_name] = $info['label'];
-        }
+    $form['data_input_field'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Select the data source field.'),
+      '#description' => $this->t('Here you can select the data source, this should contain the EAN code of the product.'),
+      '#default_value' => $entity->getDataInputField(),
+      '#required' => TRUE,
+      '#prefix' => '<div id="data_input_field_ajax">',
+      '#suffix' => '</div>',
+    ];
 
-        $form['entity_type_bundle'] = [
-          '#type' => 'select',
-          '#title' => $this->t('Type of entity bundle to use'),
-          '#options' => $bundle_list,
-          '#default_value' => $entity->getMappingEntityBundle(),
-          '#required' => TRUE,
-          '#size' => 1,
-        ];
-        // Only after we have received the entity bundle, we can select the
-        // source data field.
-        if ($entity->getMappingEntityBundle()) {
-
-          // @todo: Move this to a global variable or constant.
-          $supported_field_types = [
-            'string_long',
-          ];
-
-          // Initialize the supported fields.
-          $supported_fields = [];
-
-          // Get the base fields.
-          $base_fields = $this->entityFieldManager->getFieldDefinitions($entity->getMappingEntityType(), $entity->getMappingEntityBundle());
-
-          /* @var $field \Drupal\Core\Field\BaseFieldDefinition */
-          foreach ($base_fields as $field) {
-            if (
-              !$field->isReadOnly() &&
-              in_array($field->getType(), $supported_field_types) &&
-              is_string($field->getLabel())
-            ) {
-              $supported_fields[$field->getType()][$field->getName()] = $field->getLabel();
-            }
-          }
-
-          $form['data_input_field'] = [
-            '#type' => 'select',
-            '#title' => $this->t('Select the data source field.'),
-            '#description' => $this->t('Here you can select the data source, this should contain the EAN code of the product.'),
-            '#options' => $supported_fields,
-            '#default_value' => $entity->getMappingEntityBundle(),
-            '#required' => TRUE,
-            '#size' => 1,
-          ];
-        }
-
-      }
-    }
-    else {
-      $form['info'] = [
-        '#markup' => $this->t('Please press save to add the bundle.'),
-      ];
-    }
+    $this->updateBundles($form, $form_state);
+    $this->updateInputField($form, $form_state);
 
     return $form;
   }
@@ -167,17 +158,14 @@ class IcecatMappingForm extends EntityForm {
 
     // If the bundle changed, we redirect to the edit page again. In other cases
     // we redirect to list.
-    if ($is_new || $form_state->getValue('entity_type') !== $entity->load($entity->getOriginalId())
-        ->getMappingEntityType()
-    ) {
+    if ($is_new || $form_state->getValue('entity_type') !== $entity->load($entity->getOriginalId())->getMappingEntityType()) {
       // Configuration entities need an ID manually set.
-      $machine_name = \Drupal::transliteration()
-        ->transliterate($entity->label(), LanguageInterface::LANGCODE_DEFAULT, '_');
+      $machine_name = \Drupal::transliteration()->transliterate($entity->label(), LanguageInterface::LANGCODE_DEFAULT, '_');
       $entity->set('id', Unicode::strtolower($machine_name));
 
       // Show a message when it's a new entity.
       if ($is_new) {
-        drupal_set_message($this->t('The %label mapping has been created.', array('%label' => $entity->label())));
+        drupal_set_message($this->t('The %label mapping has been created.', ['%label' => $entity->label()]));
       }
 
       // Also inform that the user cna now continue editing.
@@ -192,11 +180,112 @@ class IcecatMappingForm extends EntityForm {
     else {
       // If it's a normal edit, we redirect to the list.
       $form_state->setRedirectUrl($this->entity->toUrl('collection'));
-      drupal_set_message($this->t('Updated the %label mapping.', array('%label' => $entity->label())));
+      drupal_set_message($this->t('Updated the %label mapping.', ['%label' => $entity->label()]));
     }
 
     // Save the entity.
     $entity->save();
+  }
+
+  /**
+   * Updates the bundle field data.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The updated form element.
+   */
+  public function updateBundles(array &$form, FormStateInterface $form_state) {
+    // Initialize the bundle list.
+    $bundle_list = [' - select - '];
+
+    // Get the user input.
+    $input = $form_state->getUserInput();
+
+    // Get the input or default value.
+    $entity_type = $input['_drupal_ajax'] ? $input['entity_type'] : $this->entity->getMappingEntityType();
+
+    if (!empty($entity_type) && $bundles = $this->entityTypeBundleInterface->getBundleInfo($entity_type)) {
+      foreach ($bundles as $machine_name => $info) {
+        $bundle_list[$machine_name] = $info['label'];
+      }
+    }
+
+    // Update the form element.
+    $form['entity_type_bundle']['#options'] = $bundle_list;
+
+    // When this is updated. We have to update both.
+    if (!empty($bundle_list) && $input['_triggering_element_name'] == 'entity_type') {
+      // Update the input field with the new data.
+      $this->updateInputField($form, $form_state, reset(array_keys($bundle_list)));
+
+      /** @var \Drupal\Core\Render\RendererInterface $renderer */
+      $ajax_response = new AjaxResponse();
+      $ajax_response->addCommand(new HtmlCommand('#entity_type_bundle_ajax', $form['entity_type_bundle']));
+      $ajax_response->addCommand(new HtmlCommand('#data_input_field_ajax', $form['data_input_field']));
+
+      return $ajax_response;
+    }
+
+    // Last case is the normal return.
+    return $form['entity_type_bundle'];
+  }
+
+  /**
+   * Updates the input field data.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The updated form element.
+   */
+  public function updateInputField(array &$form, FormStateInterface $form_state, $default_value = NULL) {
+    // Initialize the supported fields.
+    $supported_fields = [' - select - '];
+
+    // Get the user input.
+    $input = $form_state->getUserInput();
+
+    // Get the input or default values.
+    $entity_type = $input['_drupal_ajax'] ? $input['entity_type'] : $this->entity->getMappingEntityType();
+
+    if ($default_value && !$input['entity_type_bundle']) {
+      $entity_bundle = $default_value;
+    }
+    else {
+      $entity_bundle = $input['_drupal_ajax'] ? $input['entity_type_bundle'] : $this->entity->getMappingEntityBundle();
+    }
+
+    if (!empty($entity_type) && !empty($entity_bundle)) {
+      // @todo: Move this to a global variable or constant.
+      $supported_field_types = [
+        'string',
+        'string_long',
+      ];
+
+      // Get the base fields.
+      $base_fields = $this->entityFieldManager->getFieldDefinitions($entity_type, $entity_bundle);
+
+      /* @var $field \Drupal\Core\Field\BaseFieldDefinition */
+      foreach ($base_fields as $field) {
+        if (
+          !$field->isReadOnly() &&
+          in_array($field->getType(), $supported_field_types) &&
+          is_string($field->getLabel())
+        ) {
+          $supported_fields[$field->getName()] = $field->getLabel();
+        }
+      }
+    }
+
+    $form['data_input_field']['#options'] = $supported_fields;
+    return $form['data_input_field'];
   }
 
 }

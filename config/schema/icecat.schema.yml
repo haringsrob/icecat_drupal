@@ -8,6 +8,9 @@ icecat.icecat_mapping.*:
     label:
       type: label
       label: 'Label'
+    example_ean:
+      type: text
+      label: 'Example eans'
     entity_type:
       type: text
       label: 'Entity type'

@@ -35,12 +35,19 @@ class IcecatMappingLinkForm extends EntityForm {
   /**
    * The routematchinterface.
    *
-   * @var \Drupal\Core\Routing\RouteMatchInterface;
+   * @var \Drupal\Core\Routing\RouteMatchInterface
    */
   protected $routeMatch;
 
   /**
    * Constructs a new IcecatMappingForm.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManager $entityTypeManager
+   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManager $entityFieldManager
+   *   The entity field manager.
+   * @param \Drupal\Core\Routing\RouteMatchInterface $routeMatch
+   *   The route match.
    */
   public function __construct(EntityTypeManager $entityTypeManager, EntityFieldManager $entityFieldManager, RouteMatchInterface $routeMatch) {
     $this->entityTypeManager = $entityTypeManager;
@@ -70,7 +77,8 @@ class IcecatMappingLinkForm extends EntityForm {
 
     // Get the mapping entity from the url.
     $mapping = $this->routeMatch->getParameters()->get('icecat_mapping');
-    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')->load($mapping);
+    $mapping_entity = $this->entityTypeManager->getStorage('icecat_mapping')
+      ->load($mapping);
 
     // Our list of supported field types.
     $supported_field_types = [
@@ -88,15 +96,14 @@ class IcecatMappingLinkForm extends EntityForm {
 
     // Loop and populate our supported fields list.
     foreach ($base_fields as $field) {
-      if (in_array($field->getType(), $supported_field_types) &&
-        !$field->isReadOnly() &&
-        $mapping_entity->getDataInputField() !== $field->getName() &&
-        ($entity->getLocalField() == $field->getName() || !$mapping_link_storage->loadByProperties([
+      if (in_array($field->getType(), $supported_field_types)
+        && !$field->isReadOnly()
+        && $mapping_entity->getDataInputField() !== $field->getName()
+        && ($entity->getLocalField() == $field->getName() || !$mapping_link_storage->loadByProperties([
           'mapping' => $mapping,
           'local_field' => $field->getName(),
-        ])) &&
-        // @todo: Add another way to handle this.
-        is_string($field->getLabel())
+        ]))
+        && is_string($field->getLabel())
       ) {
         $supported_fields[$field->getType()][$field->getName()] = $field->getLabel();
       }
@@ -157,8 +164,7 @@ class IcecatMappingLinkForm extends EntityForm {
     $is_new = !$this->entity->getOriginalId();
 
     // Make sure we dont duplicate any mapping.
-    if ($is_new && $this->entityTypeManager->getStorage('icecat_mapping_link')
-        ->load($this->generateMachineName())
+    if ($is_new && $this->entityTypeManager->getStorage('icecat_mapping_link')->load($this->generateMachineName())
     ) {
       $form_state->setErrorByName('remote_field', $this->t('You already added a field with these properties'));
     }
@@ -189,9 +195,7 @@ class IcecatMappingLinkForm extends EntityForm {
    * Generates the machine name to use.
    */
   private function generateMachineName() {
-    return \Drupal::transliteration()
-      ->transliterate($this->routeMatch->getParameters()
-          ->get('icecat_mapping') . '__' . $this->entity->getLocalField() . '_' . $this->entity->getRemoteField(), LanguageInterface::LANGCODE_DEFAULT, '_');
+    return \Drupal::transliteration()->transliterate($this->routeMatch->getParameters()->get('icecat_mapping') . '__' . $this->entity->getLocalField() . '_' . $this->entity->getRemoteField(), LanguageInterface::LANGCODE_DEFAULT, '_');
   }
 
 }

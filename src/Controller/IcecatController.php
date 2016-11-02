@@ -163,20 +163,19 @@ class IcecatController implements ContainerInjectionInterface {
    *
    * @param string $field
    *   The local field identifier.
-   * @param string $data
+   * @param string $data_raw
    *   The data to add.
    */
   private function setField($field, $data_raw) {
     if (isset($this->fieldInfo[$field]) && $field_info = $this->fieldInfo[$field]) {
-
       // FullText.
       if (in_array($field_info->getType(), ['text_with_summary', 'text'])) {
-        // Take the current value so we leave that unchanged.
+        // Take the current value so that we can just change the content.
         $data = $this->entity->get($field)->getValue();
-        // Only update the value.
         $data[0]['value'] = _filter_autop($this->cleanupContent($data_raw));
       }
       else {
+        // In other cases we do not want html at all.
         $data = strip_tags($data_raw);
       }
 

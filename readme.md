@@ -2,12 +2,13 @@
 
 ## Purpose
 
-The goal of this module is to provide automatic product data completion.
+This module implements the [Icecat library](https://github.com/haringsrob/icecat) and adds
+mapping functions to Drupal.
 
 It uses the EAN code (Soon sku + brand) to get structured data from Icecat and maps it to
 Drupal entities.
 
-In combination with Drupal commerce, this allows you to create a full webshop with products just
+In combination with [Drupal commerce](https://www.drupal.org/project/commerce), this allows you to create a full webshop with products just
 by importing a price + ean xml. (Importer is not part of this module).
 
 ## Icecat

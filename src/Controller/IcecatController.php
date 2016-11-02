@@ -2,6 +2,7 @@
 
 namespace Drupal\icecat\Controller;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityFieldManager;
@@ -134,23 +135,25 @@ class IcecatController implements ContainerInjectionInterface {
           // Map the data.
           foreach ($this->getMappingLinks() as $mapping) {
             if ($entity->get($mapping->getLocalField())) {
-              switch ($mapping->remote_field_type) {
+              switch ($mapping->getRemoteFieldType()) {
                 // @todo: We can simplefy this?
                 // @todo: Html decode encode/filter xss and security?
                 case 'attribute':
-                  $data = $result->getAttribute($mapping->getRemoteField());
+                  $this->setSimpleField($mapping->getLocalField(), $result->getAttribute($mapping->getRemoteField()));
                   break;
 
                 case 'other':
-                  $data = $result->{$mapping->getRemoteField()}();
+                  $this->setSimpleField($mapping->getLocalField(), $result->{$mapping->getRemoteField()}());
+                  break;
+
+                case 'images':
+                  $this->setImageField($mapping->getLocalField(), $result->getImages());
                   break;
 
                 default:
-                  $data = $result->getSpec($mapping->getRemoteField());
+                  $this->setSimpleField($mapping->getLocalField(), $result->getSpec($mapping->getRemoteField()));
                   break;
               }
-              // Set the data to the field.
-              $this->setField($mapping->getLocalField(), $data);
             }
           }
         }
@@ -163,10 +166,58 @@ class IcecatController implements ContainerInjectionInterface {
    *
    * @param string $field
    *   The local field identifier.
+   * @param array $data_raw
+   *   List of images to add.
+   */
+  private function setImageField($field, $data_raw) {
+    // Initialize data array.
+    $data = [];
+
+    // Check if we have the field.
+    if (isset($this->fieldInfo[$field]) && $field_info = $this->fieldInfo[$field]) {
+      $upload_directory = $field_info->getSetting('file_directory');
+      $uri_sceme = $field_info->getSetting('uri_scheme');
+      $cardinality = $field_info->getFieldStorageDefinition()->getCardinality();
+      $user = \Drupal::currentUser();
+
+      // Take just the allowed amount if not unlimited.
+      if ($cardinality !== '-1') {
+        $data_raw = array_slice($data_raw, 0, $cardinality);
+      }
+
+      // Build the upload location.
+      $destination = trim($upload_directory, '/');
+      $destination = PlainTextOutput::renderFromHtml(\Drupal::token()->replace($destination, $data));
+      $upload_location = $uri_sceme . '://' . $destination;
+
+      // Save the images to our filesystem.
+      foreach ($data_raw as $image) {
+        $image_data = file_get_contents($image['high']);
+        $filename = basename($image['high']);
+
+        if ($file = file_save_data($image_data, $upload_location . '/' . $filename, FILE_EXISTS_RENAME)) {
+          $data[] = [
+            'target_id' => $file->id(),
+            'display' => 1,
+          ];
+        }
+      }
+
+      if (!empty($data)) {
+        $this->entity->set($field, $data);
+      }
+    }
+  }
+
+  /**
+   * Sets the field to the remote value.
+   *
+   * @param string $field
+   *   The local field identifier.
    * @param string $data_raw
    *   The data to add.
    */
-  private function setField($field, $data_raw) {
+  private function setSimpleField($field, $data_raw) {
     if (isset($this->fieldInfo[$field]) && $field_info = $this->fieldInfo[$field]) {
       // FullText.
       if (in_array($field_info->getType(), ['text_with_summary', 'text'])) {

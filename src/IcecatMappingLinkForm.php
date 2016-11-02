@@ -84,6 +84,8 @@ class IcecatMappingLinkForm extends EntityForm {
       'string',
       'string_long',
       'integer',
+      'text_with_summary',
+      'text',
     ];
 
     // Initialize the supported fields.
@@ -94,7 +96,7 @@ class IcecatMappingLinkForm extends EntityForm {
     $base_fields = $this->entityFieldManager->getFieldDefinitions($mapping_entity->getMappingEntityType(), $mapping_entity->getMappingEntityBundle());
 
     // Loop and populate our supported fields list.
-    foreach ($base_fields as $field) {
+    foreach ($base_fields as $key => $field) {
       if (in_array($field->getType(), $supported_field_types)
         && !$field->isReadOnly()
         && $mapping_entity->getDataInputField() !== $field->getName()
@@ -102,9 +104,10 @@ class IcecatMappingLinkForm extends EntityForm {
           'mapping' => $mapping,
           'local_field' => $field->getName(),
         ]))
-        && is_string($field->getLabel())
       ) {
-        $supported_fields[$field->getType()][$field->getName()] = $field->getLabel();
+        // @todo: Sometimes it is an object?
+        $label = is_string($field->getLabel()) ? $field->getLabel() : $field->getLabel()->render();
+        $supported_fields[$field->getType()][$field->getName()] = $label;
       }
     }
 
@@ -133,12 +136,13 @@ class IcecatMappingLinkForm extends EntityForm {
     $remote_field_types = [
       'attribute' => $this->t('Attribute'),
       'specification' => $this->t('Specification'),
+      'other' => $this->t('Other'),
     ];
 
     $form['remote_field_type'] = [
       '#type' => 'select',
       '#title' => $this->t('Remote field type'),
-      '#default_value' => $entity->getRemoteFieldType() ? $entity->getRemoteFieldType() : 'attribute',
+      '#default_value' => $entity->getRemoteFieldType() ? $entity->getRemoteFieldType() : 'other',
       '#options' => $remote_field_types,
       '#required' => TRUE,
       '#ajax' => [
@@ -157,20 +161,6 @@ class IcecatMappingLinkForm extends EntityForm {
       '#prefix' => '<div id="remote_field_data">',
       '#suffix' => '</div>',
     ];
-
-    // @todo: Dont think we need this.
-    /*$form['grab_data'] = [
-      '#type' => 'button',
-      '#prefix' => '<div id="example_fields_list">',
-      '#suffix' => '</div>',
-      '#limit_validation_errors' => [],
-      '#value' => $this->t('Get available fields'),
-      '#ajax' => [
-        'callback' => [$this, 'getPossibleFields'],
-        'event' => 'click',
-        'wrapper' => 'remote_field_data',
-      ],
-    ];*/
 
     $this->getPossibleFields($form, $form_state, $entity->getRemoteField());
 
@@ -201,27 +191,33 @@ class IcecatMappingLinkForm extends EntityForm {
     // Get the user input so we might get other fields.
     $input = $form_state->getUserInput();
 
+    // Initialize options.
     $options = [];
+
+    // Fetch an example product.
+    $fetcher = new IcecatFetcher($ean);
+    $result = $fetcher->getResult();
 
     // Based on the specs or attributes we update the list.
     if (
       (isset($input['remote_field_type']) && $input['remote_field_type'] == 'specification')
       || (!isset($input['remote_field_type']) && $form['remote_field_type']['#default_value'] == 'specification')
     ) {
-      $fetcher = new IcecatFetcher($ean);
-      $result = $fetcher->getResult();
-
-      $specs = $result->getSpecs();
-
-      foreach ($specs as $spec) {
+      foreach ($result->getSpecs() as $spec) {
         $options[$spec['spec_id']] = $spec['name'];
+      }
+    }
+    elseif (isset($input['remote_field_type']) && $input['remote_field_type'] == 'attribute') {
+      foreach ($result->getAttributes() as $key => $attribute) {
+        $options[$key] = $key . ' (Example: ' . $attribute . ')';
       }
     }
     else {
       $options = [
-        'ean' => $this->t('ean'),
-        'sku' => $this->t('sku'),
-        'brand' => $this->t('brand'),
+        'getSupplier' => $this->t('Supplier'),
+        'getLongDescription' => $this->t('Long description'),
+        'getShortDescription' => $this->t('Short description'),
+        'getCategory' => $this->t('Category'),
       ];
     }
 
@@ -238,8 +234,7 @@ class IcecatMappingLinkForm extends EntityForm {
     $is_new = !$this->entity->getOriginalId();
 
     // Make sure we dont duplicate any mapping.
-    if ($is_new && $this->entityTypeManager->getStorage('icecat_mapping_link')->load($this->generateMachineName())
-    ) {
+    if ($is_new && $this->entityTypeManager->getStorage('icecat_mapping_link')->load($this->generateMachineName())) {
       $form_state->setErrorByName('remote_field', $this->t('You already added a field with these properties'));
     }
   }
@@ -248,21 +243,21 @@ class IcecatMappingLinkForm extends EntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
-    $entity = $this->entity;
-    $is_new = !$entity->getOriginalId();
-
     // If the bundle changed, we redirect to the edit page again. In other cases
     // we redirect to list.
-    if ($is_new) {
+    if (!$this->entity->getOriginalId()) {
       // Configuration entities need an ID manually set.
-      $entity->set('id', Unicode::strtolower($this->generateMachineName()));
+      $this->entity->set('id', Unicode::strtolower($this->generateMachineName()));
 
       // Also inform that the user cna now continue editing.
       drupal_set_message($this->t('Mapping link has been created'));
     }
+    else {
+      drupal_set_message($this->t('Mapping link has been updated'));
+    }
 
     // Save the entity.
-    $entity->save();
+    $this->entity->save();
   }
 
   /**

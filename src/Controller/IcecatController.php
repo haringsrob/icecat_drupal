@@ -3,7 +3,6 @@
 namespace Drupal\icecat\Controller;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManager;
@@ -67,14 +66,10 @@ class IcecatController implements ContainerInjectionInterface {
    *   True if mapping available. False otherwise.
    */
   private function hasMapping() {
-    // @todo: Ignore for non nodes.. But we want to allow this..
-    if (!$this->entity instanceof ContentEntityInterface) {
-      return FALSE;
-    }
     $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping');
     $mappings = $mapping_link_storage->loadByProperties([
       'entity_type' => $this->entity->getEntityTypeId(),
-      'entity_type_bundle' => $this->entity->getType(),
+      'entity_type_bundle' => $this->entity->bundle(),
     ]);
     if (!empty($mappings)) {
       $this->entityMapping = reset($mappings);
@@ -112,11 +107,33 @@ class IcecatController implements ContainerInjectionInterface {
 
         foreach ($this->getMappingLinks() as $mapping) {
           if ($entity->get($mapping->getLocalField())) {
-            $entity->set($mapping->getLocalField(), $result->getSpec($mapping->getRemoteField()));
+            switch ($mapping->remote_field_type) {
+              // @todo: We can simplefy this?
+              // @todo: Html decode encode/filter xss and security?
+              case 'attribute':
+                $entity->set($mapping->getLocalField(), $result->getAttribute($mapping->getRemoteField()));
+                break;
+
+              case 'other':
+                // @todo: Text formatting? Better way?
+                $entity->set($mapping->getLocalField(), $result->{$mapping->getRemoteField()}());
+                break;
+
+              default:
+                $entity->set($mapping->getLocalField(), $result->getSpec($mapping->getRemoteField()));
+                break;
+            }
           }
         }
       }
     }
+  }
+
+  private function cleanupContent($input) {
+    $replacement_html_bad = ['<b>', '</b>'];
+    $replacement_html_good = ['<strong>', '</strong>'];
+
+    return str_replace($replacement_html_bad, $replacement_html_good, $input);
   }
 
 }

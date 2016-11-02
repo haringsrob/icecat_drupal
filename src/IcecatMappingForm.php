@@ -5,8 +5,9 @@ namespace Drupal\icecat;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Entity\BundleEntityFormBase;
 use Drupal\Core\Entity\EntityFieldManager;
-use Drupal\Core\Entity\EntityForm;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Entity\EntityTypeRepository;
 use Drupal\Core\Form\FormStateInterface;
@@ -19,7 +20,7 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
  *
  * @package Drupal\icecat
  */
-class IcecatMappingForm extends EntityForm {
+class IcecatMappingForm extends BundleEntityFormBase {
 
   /**
    * The entity type repository.
@@ -96,11 +97,20 @@ class IcecatMappingForm extends EntityForm {
       '#default_value' => $entity->label(),
     ];
 
+    $form['id'] = [
+      '#type' => 'machine_name',
+      '#default_value' => $entity->id(),
+      '#machine_name' => [
+        'exists' => '\Drupal\icecat\Entity\IcecatMapping::load',
+      ],
+      '#maxlength' => EntityTypeInterface::BUNDLE_MAX_LENGTH,
+    ];
+
     $form['example_ean'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Example ean(s)'),
-      '#description' => $this->t('A comma separated list of example ean codes. These products will be used for mapping configuration'),
-      '#required' => FALSE,
+      '#description' => $this->t('A comma separated list of example ean codes. These products will be used for mapping configuration.'),
+      '#required' => TRUE,
       '#default_value' => $entity->getExampleEans(),
     ];
 
@@ -145,45 +155,25 @@ class IcecatMappingForm extends EntityForm {
     $this->updateBundles($form, $form_state);
     $this->updateInputField($form, $form_state);
 
-    return $form;
+    return $this->protectBundleIdElement($form);
   }
 
   /**
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
-    $entity = $this->entity;
-    $is_new = !$entity->getOriginalId();
-
-    // If the bundle changed, we redirect to the edit page again. In other cases
-    // we redirect to list.
-    if ($is_new || $form_state->getValue('entity_type') !== $entity->load($entity->getOriginalId())->getMappingEntityType()) {
-      // Configuration entities need an ID manually set.
-      $machine_name = \Drupal::transliteration()->transliterate($entity->label(), LanguageInterface::LANGCODE_DEFAULT, '_');
-      $entity->set('id', Unicode::strtolower($machine_name));
-
-      // Show a message when it's a new entity.
-      if ($is_new) {
-        drupal_set_message($this->t('The %label mapping has been created.', ['%label' => $entity->label()]));
-      }
-
-      // Also inform that the user cna now continue editing.
-      drupal_set_message($this->t('You can now continue the mapping configuration.'));
-
-      // Set the redirect.
-      $form_state->setRedirect(
-        'entity.icecat_mapping.edit_form',
-        ['icecat_mapping' => $entity->id()]
-      );
+    if ($this->entity->getOriginalId()) {
+      drupal_set_message($this->t('The %label mapping has been created.', ['%label' => $this->entity->label()]));
     }
     else {
-      // If it's a normal edit, we redirect to the list.
-      $form_state->setRedirectUrl($this->entity->toUrl('collection'));
-      drupal_set_message($this->t('Updated the %label mapping.', ['%label' => $entity->label()]));
+      drupal_set_message($this->t('Updated the %label mapping.', ['%label' => $this->entity->label()]));
     }
 
+    // Redirect to the list.
+    $form_state->setRedirectUrl($this->entity->toUrl('collection'));
+
     // Save the entity.
-    $entity->save();
+    $this->entity->save();
   }
 
   /**
@@ -199,13 +189,13 @@ class IcecatMappingForm extends EntityForm {
    */
   public function updateBundles(array &$form, FormStateInterface $form_state) {
     // Initialize the bundle list.
-    $bundle_list = [' - select - '];
+    $bundle_list = [$this->t('- Select -')];
 
     // Get the user input.
     $input = $form_state->getUserInput();
 
     // Get the input or default value.
-    $entity_type = $input['_drupal_ajax'] ? $input['entity_type'] : $this->entity->getMappingEntityType();
+    $entity_type = isset($input['_drupal_ajax']) ? $input['entity_type'] : $this->entity->getMappingEntityType();
 
     if (!empty($entity_type) && $bundles = $this->entityTypeBundleInterface->getBundleInfo($entity_type)) {
       foreach ($bundles as $machine_name => $info) {
@@ -217,7 +207,7 @@ class IcecatMappingForm extends EntityForm {
     $form['entity_type_bundle']['#options'] = $bundle_list;
 
     // When this is updated. We have to update both.
-    if (!empty($bundle_list) && $input['_triggering_element_name'] == 'entity_type') {
+    if (!empty($bundle_list) && isset($input['_triggering_element_name']) && $input['_triggering_element_name'] == 'entity_type') {
       // Update the input field with the new data.
       $this->updateInputField($form, $form_state, reset(array_keys($bundle_list)));
 
@@ -246,26 +236,25 @@ class IcecatMappingForm extends EntityForm {
    */
   public function updateInputField(array &$form, FormStateInterface $form_state, $default_value = NULL) {
     // Initialize the supported fields.
-    $supported_fields = [' - select - '];
+    $supported_fields = [$this->t('- Select -')];
 
     // Get the user input.
     $input = $form_state->getUserInput();
 
     // Get the input or default values.
-    $entity_type = $input['_drupal_ajax'] ? $input['entity_type'] : $this->entity->getMappingEntityType();
+    $entity_type = isset($input['_drupal_ajax']) ? $input['entity_type'] : $this->entity->getMappingEntityType();
 
     if ($default_value && !$input['entity_type_bundle']) {
       $entity_bundle = $default_value;
     }
     else {
-      $entity_bundle = $input['_drupal_ajax'] ? $input['entity_type_bundle'] : $this->entity->getMappingEntityBundle();
+      $entity_bundle = isset($input['_drupal_ajax']) ? $input['entity_type_bundle'] : $this->entity->getMappingEntityBundle();
     }
 
     if (!empty($entity_type) && !empty($entity_bundle)) {
       // @todo: Move this to a global variable or constant.
       $supported_field_types = [
         'string',
-        'string_long',
       ];
 
       // Get the base fields.

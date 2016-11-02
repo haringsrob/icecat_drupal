@@ -4,6 +4,7 @@ namespace Drupal\icecat\Controller;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\Entity;
+use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\icecat\IcecatFetcher;
@@ -31,13 +32,37 @@ class IcecatController implements ContainerInjectionInterface {
   private $entityMapping;
 
   /**
+   * The entity field manager.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  private $entityFieldManager;
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManager
+   */
+  private $entityTypeManager;
+
+  /**
+   * Contains the field info for the current entity.
+   *
+   * @var array
+   */
+  private $fieldInfo;
+
+  /**
    * Initializes a IcecatController instance.
    *
    * @param \Drupal\Core\Entity\EntityTypeManager $entity_type_manager
    *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManager $entityFieldManager
+   *   The entity field manager.
    */
-  public function __construct(EntityTypeManager $entity_type_manager) {
+  public function __construct(EntityTypeManager $entity_type_manager, EntityFieldManager $entityFieldManager) {
     $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entityFieldManager;
   }
 
   /**
@@ -45,7 +70,8 @@ class IcecatController implements ContainerInjectionInterface {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity_type.manager')
+      $container->get('entity_type.manager'),
+      $container->get('entity_field.manager')
     );
   }
 
@@ -73,7 +99,7 @@ class IcecatController implements ContainerInjectionInterface {
     ]);
     if (!empty($mappings)) {
       $this->entityMapping = reset($mappings);
-
+      $this->fieldInfo = $this->entityFieldManager->getFieldDefinitions($this->entityMapping->getMappingEntityType(), $this->entityMapping->getMappingEntityBundle());
       return TRUE;
     }
 
@@ -103,25 +129,28 @@ class IcecatController implements ContainerInjectionInterface {
       if ($ean_code = $entity->get($this->entityMapping->getDataInputField())->getValue()) {
         // Initialize a new fetcher object.
         $fetcherSession = new IcecatFetcher($ean_code[0]['value']);
-        $result = $fetcherSession->getResult();
+        // Only iterate if we have results..
+        if ($result = $fetcherSession->getResult()) {
+          // Map the data.
+          foreach ($this->getMappingLinks() as $mapping) {
+            if ($entity->get($mapping->getLocalField())) {
+              switch ($mapping->remote_field_type) {
+                // @todo: We can simplefy this?
+                // @todo: Html decode encode/filter xss and security?
+                case 'attribute':
+                  $data = $result->getAttribute($mapping->getRemoteField());
+                  break;
 
-        foreach ($this->getMappingLinks() as $mapping) {
-          if ($entity->get($mapping->getLocalField())) {
-            switch ($mapping->remote_field_type) {
-              // @todo: We can simplefy this?
-              // @todo: Html decode encode/filter xss and security?
-              case 'attribute':
-                $entity->set($mapping->getLocalField(), $result->getAttribute($mapping->getRemoteField()));
-                break;
+                case 'other':
+                  $data = $result->{$mapping->getRemoteField()}();
+                  break;
 
-              case 'other':
-                // @todo: Text formatting? Better way?
-                $entity->set($mapping->getLocalField(), $result->{$mapping->getRemoteField()}());
-                break;
-
-              default:
-                $entity->set($mapping->getLocalField(), $result->getSpec($mapping->getRemoteField()));
-                break;
+                default:
+                  $data = $result->getSpec($mapping->getRemoteField());
+                  break;
+              }
+              // Set the data to the field.
+              $this->setField($mapping->getLocalField(), $data);
             }
           }
         }
@@ -129,9 +158,44 @@ class IcecatController implements ContainerInjectionInterface {
     }
   }
 
+  /**
+   * Sets the field to the remote value.
+   *
+   * @param string $field
+   *   The local field identifier.
+   * @param string $data
+   *   The data to add.
+   */
+  private function setField($field, $data_raw) {
+    if (isset($this->fieldInfo[$field]) && $field_info = $this->fieldInfo[$field]) {
+
+      // FullText.
+      if (in_array($field_info->getType(), ['text_with_summary', 'text'])) {
+        // Take the current value so we leave that unchanged.
+        $data = $this->entity->get($field)->getValue();
+        // Only update the value.
+        $data[0]['value'] = _filter_autop($this->cleanupContent($data_raw));
+      }
+      else {
+        $data = strip_tags($data_raw);
+      }
+
+      $this->entity->set($field, $data);
+    }
+  }
+
+  /**
+   * Cleans incoming markup to drupal requirements.
+   *
+   * @param string $input
+   *   The input to be cleaned.
+   *
+   * @return string
+   *   The cleaned markup.
+   */
   private function cleanupContent($input) {
-    $replacement_html_bad = ['<b>', '</b>'];
-    $replacement_html_good = ['<strong>', '</strong>'];
+    $replacement_html_bad = ['<b>', '</b>', '\n'];
+    $replacement_html_good = ['<strong>', '</strong>', '<br />'];
 
     return str_replace($replacement_html_bad, $replacement_html_good, $input);
   }

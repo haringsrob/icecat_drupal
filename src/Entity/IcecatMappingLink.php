@@ -26,7 +26,6 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   admin_permission = "manage icecat mappings",
  *   entity_keys = {
  *     "id" = "id",
- *     "label" = "label"
  *   },
  *   links = {
  *     "add-form" = "/admin/structure/icecat/mappings/{icecat_mapping}/links/add",
@@ -36,7 +35,6 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   },
  *   config_export = {
  *     "id",
- *     "label",
  *     "local_field",
  *     "remote_field",
  *     "remote_field_type",
@@ -45,6 +43,16 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  * )
  */
 class IcecatMappingLink extends ConfigEntityBase implements IcecatMappingLinkInterface {
+
+  /**
+   * Constructs a Icecat mapping link config.
+   *
+   * @param array $values
+   *  The values to store.
+   */
+  public function __construct(array $values) {
+    parent::__construct($values, 'icecat_mapping_link');
+  }
 
   /**
    * {@inheritdoc}

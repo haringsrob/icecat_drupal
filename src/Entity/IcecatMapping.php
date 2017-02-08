@@ -47,6 +47,16 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
 class IcecatMapping extends ConfigEntityBase implements IcecatMappingInterface {
 
   /**
+   * Constructs a Icecat mapping config.
+   *
+   * @param array $values
+   *  The values to store.
+   */
+  public function __construct(array $values) {
+    parent::__construct($values, 'icecat_mapping');
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getMappingEntityType() {

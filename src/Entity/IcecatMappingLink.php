@@ -9,7 +9,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *
  * @ConfigEntityType(
  *   id ="icecat_mapping_link",
- *   label = @Translation("Icecat Mapping Link"),
+ *   label = @Translation("Icecat mapping link"),
  *   handlers = {
  *     "list_builder" = "Drupal\icecat\IcecatMappingLinkListBuilder",
  *     "form" = {

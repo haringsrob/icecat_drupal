@@ -186,6 +186,8 @@ class IcecatMappingLinkForm extends EntityForm {
       '#suffix' => '</div>',
     ];
 
+    $form['#attributes']['novalidate'] = 'novalidate';
+
     $this->getPossibleTypes($form, $form_state);
     $this->getPossibleFields($form, $form_state);
 

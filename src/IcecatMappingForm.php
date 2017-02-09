@@ -155,6 +155,8 @@ class IcecatMappingForm extends BundleEntityFormBase {
     $this->updateBundles($form, $form_state);
     $this->updateInputField($form, $form_state);
 
+    $form['#attributes']['novalidate'] = 'novalidate';
+
     return $this->protectBundleIdElement($form);
   }
 
@@ -195,7 +197,7 @@ class IcecatMappingForm extends BundleEntityFormBase {
     $input = $form_state->getUserInput();
 
     // Get the input or default value.
-    $entity_type = isset($input['_drupal_ajax']) ? $input['entity_type'] : $this->entity->getMappingEntityType();
+    $entity_type = (!isset($input['_drupal_ajax']) && !empty($input)) ? $input['entity_type'] : $this->entity->getMappingEntityType();
 
     if (!empty($entity_type) && $bundles = $this->entityTypeBundleInterface->getBundleInfo($entity_type)) {
       foreach ($bundles as $machine_name => $info) {
@@ -242,13 +244,13 @@ class IcecatMappingForm extends BundleEntityFormBase {
     $input = $form_state->getUserInput();
 
     // Get the input or default values.
-    $entity_type = isset($input['_drupal_ajax']) ? $input['entity_type'] : $this->entity->getMappingEntityType();
+    $entity_type = (!isset($input['_drupal_ajax']) && !empty($input)) ? $input['entity_type'] : $this->entity->getMappingEntityType();
 
     if ($default_value && !$input['entity_type_bundle']) {
       $entity_bundle = $default_value;
     }
     else {
-      $entity_bundle = isset($input['_drupal_ajax']) ? $input['entity_type_bundle'] : $this->entity->getMappingEntityBundle();
+      $entity_bundle = (!isset($input['_drupal_ajax']) && !empty($input)) ? $input['entity_type_bundle'] : $this->entity->getMappingEntityBundle();
     }
 
     if (!empty($entity_type) && !empty($entity_bundle)) {

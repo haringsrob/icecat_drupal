@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\icecat\Funcional;
+namespace Drupal\Tests\icecat\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 

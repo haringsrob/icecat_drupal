@@ -58,7 +58,7 @@ class IcecatConfigEntityTest extends EntityKernelTestBase {
     $loaded_mapping->set('example_ean', '123,456');
     $loaded_mapping->save();
 
-    $loaded_mapping = IcecatMapping::load(1);
+    $loaded_mapping = IcecatMapping::load(2);
     $this->assertEquals(['123', '456'], $loaded_mapping->getExampleEanList());
   }
 

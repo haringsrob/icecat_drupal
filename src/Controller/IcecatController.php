@@ -169,7 +169,7 @@ class IcecatController implements ContainerInjectionInterface {
    * @param array $data_raw
    *   List of images to add.
    */
-  private function setImageField($field, $data_raw) {
+  private function setImageField($field, array $data_raw) {
     // Initialize data array.
     $data = [];
 

@@ -50,7 +50,7 @@ class IcecatMapping extends ConfigEntityBase implements IcecatMappingInterface {
    * Constructs a Icecat mapping config.
    *
    * @param array $values
-   *  The values to store.
+   *   The values to store.
    */
   public function __construct(array $values) {
     parent::__construct($values, 'icecat_mapping');

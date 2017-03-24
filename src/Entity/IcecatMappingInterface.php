@@ -31,5 +31,4 @@ interface IcecatMappingInterface extends ConfigEntityInterface {
    */
   public function getExampleEans();
 
-
 }

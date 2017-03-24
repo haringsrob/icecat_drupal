@@ -10,7 +10,7 @@ use Drupal\Tests\BrowserTestBase;
 /**
  * Tests Icecat settings page.
  */
-class IcecatMappingTest extends BrowserTestBase{
+class IcecatMappingTest extends BrowserTestBase {
 
   /**
    * Modules to enable.
@@ -48,7 +48,7 @@ class IcecatMappingTest extends BrowserTestBase{
     // Create Basic page node type.
     $this->drupalCreateContentType([
       'type' => 'page',
-      'name' => 'Basic page'
+      'name' => 'Basic page',
     ]);
 
     // Create a field.
@@ -123,6 +123,7 @@ class IcecatMappingTest extends BrowserTestBase{
     $this->drupalGet('admin/structure/icecat/mappings/test_mapping/links');
     $this->assertSession()->pageTextContains('There is no Icecat mapping link yet.');
   }
+
   /**
    * Tests the creation of a mapping link.
    */

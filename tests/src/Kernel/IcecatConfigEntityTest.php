@@ -21,6 +21,9 @@ class IcecatConfigEntityTest extends EntityKernelTestBase {
     'inline_entity_form',
   ];
 
+  /**
+   * {@inheritdoc}
+   */
   protected function setUp() {
     parent::setUp();
   }

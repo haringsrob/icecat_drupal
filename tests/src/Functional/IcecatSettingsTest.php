@@ -7,7 +7,7 @@ use Drupal\Tests\BrowserTestBase;
 /**
  * Tests Icecat settings page.
  */
-class IcecatSettingsTest extends BrowserTestBase{
+class IcecatSettingsTest extends BrowserTestBase {
 
   /**
    * Modules to enable.

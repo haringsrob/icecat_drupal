@@ -34,8 +34,8 @@ class IcecatFetcher extends Fetcher {
    *
    * @todo: This makes no sense, we have to update the library as well..
    *
-   * @return Result
-   *   The resultset object.
+   * @return \haringsrob\Icecat\Model\Result
+   *   The result set object.
    */
   public function getResult() {
     $this->fetchBaseData();

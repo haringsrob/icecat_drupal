@@ -22,13 +22,6 @@ class IcecatConfigEntityTest extends EntityKernelTestBase {
   ];
 
   /**
-   * {@inheritdoc}
-   */
-  protected function setUp() {
-    parent::setUp();
-  }
-
-  /**
    * Tests a basic mapping entity.
    *
    * Tests the config entity and its properties.

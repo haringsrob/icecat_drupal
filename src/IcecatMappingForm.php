@@ -233,8 +233,8 @@ class IcecatMappingForm extends BundleEntityFormBase {
    * @param string $default_value
    *   The default value.
    *
-   * @return array The updated form element.
-   * The updated form element.
+   * @return array
+   *   The updated form element.
    */
   public function updateInputField(array &$form, FormStateInterface $form_state, $default_value = NULL) {
     // Initialize the supported fields.

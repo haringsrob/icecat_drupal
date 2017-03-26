@@ -21,7 +21,7 @@ class IcecatController implements ContainerInjectionInterface {
   /**
    * The entity used in the controller.
    *
-   * @var Entity
+   * @var \Drupal\Core\Entity\EntityInterface
    */
   private $entity;
 
@@ -110,11 +110,12 @@ class IcecatController implements ContainerInjectionInterface {
   /**
    * Gets the mapping links.
    *
-   * @return EntityInterface
+   * @return \Drupal\icecat\Entity\IcecatMappingLinkInterface[]
    *   The mapping links.
    */
   private function getMappingLinks() {
     $mapping_link_storage = $this->entityTypeManager->getStorage('icecat_mapping_link');
+    /** @var \Drupal\icecat\Entity\IcecatMappingLinkInterface[] $mapping_links */
     $mapping_links = $mapping_link_storage->loadByProperties([
       'mapping' => $this->entityMapping->id(),
     ]);
@@ -169,7 +170,7 @@ class IcecatController implements ContainerInjectionInterface {
    * @param array $data_raw
    *   List of images to add.
    */
-  private function setImageField($field, $data_raw) {
+  private function setImageField($field, array $data_raw) {
     // Initialize data array.
     $data = [];
 
